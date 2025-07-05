@@ -14,31 +14,40 @@ def get_show_links(collection_url):
     soup = BeautifulSoup(response.content, 'lxml')
 
     shows = []
-    for a in soup.find_all('a', attrs={'data-testid': 'SummaryItemSimple'}):
-        href = a.get('href')
-        if href and '/fashion-shows/' in href:
-            full_url = BASE_URL + href
 
-            # Designer name (inside <h3>)
-            try:
-                designer = a.find('h3').text.strip()
-            except:
-                designer = 'N/A'
+    # 🔹 First: Highlighted shows (already working)
+    highlight_cards = soup.find_all('a', attrs={'data-testid': 'SummaryItemSimple'})
 
-            # Cover image URL (from nested <img>)
-            try:
-                image_tag = a.find('img')
-                image_url = image_tag['src'] if image_tag else None
-            except:
-                image_url = None
+    # 🔹 Second: Latest shows (new selector)
+    latest_cards = soup.find_all('a', attrs={'data-recirc-pattern': 'summary-item'})
 
-            shows.append({
-                'designer': designer,
-                'url': full_url,
-                'image_url': image_url
-            })
+    all_cards = highlight_cards + latest_cards
+    print(f"Found {len(all_cards)} total show links.")
+
+    for card in all_cards:
+        href = card.get('href')
+        if not href or '/fashion-shows/' not in href:
+            continue
+
+        h3 = card.find('h3')
+        if h3 is None:
+            print("Skipping due to missing <h3> in:")
+            print(card.prettify())  # ← this prints the entire HTML block
+            continue
+
+        designer = h3.text.strip()
+        full_url = BASE_URL + href
+
+        shows.append({
+            'designer': designer,
+            'url': full_url,
+            'image_url': None
+        })
+
+
 
     return shows
+
 
 def scrape_show_page(show):
     url = show['url']
@@ -47,7 +56,10 @@ def scrape_show_page(show):
 
     # Title or collection name
     try:
-        title = soup.find('h1').text.strip()
+        url_parts = url.split('/')
+        season = url_parts[4].replace('-', ' ').title()
+        collection_name = f"{show['designer']} {season}"
+
     except:
         title = 'N/A'
 
@@ -73,7 +85,7 @@ def scrape_show_page(show):
         'designer': show['designer'],
         'collection_url': url,
         'cover_image': show['image_url'],
-        'collection_name': title,
+        'collection_name': collection_name,
         'review': review,
         'look_images': image_urls
     }
@@ -105,10 +117,10 @@ def save_to_csv(data, filename='fashion_shows.csv'):
 
 def main():
     collection_url = 'https://www.vogue.com/fashion-shows/spring-2026-ready-to-wear'
+    #show_links = get_show_links(collection_url)
     show_links = get_show_links(collection_url)
-    # show_links = get_show_links(collection_url)
-    # all_shows = scrape_all_shows(show_links)
-    all_shows = scrape_all_shows(show_links[:3])  # Only scrape first 3
+    all_shows = scrape_all_shows(show_links)
+    #all_shows = scrape_all_shows(show_links[:3])  # Only scrape first 3
     save_to_csv(all_shows, filename='data/spring_2026_shows.csv')
 
 if __name__ == '__main__':
