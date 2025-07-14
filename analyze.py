@@ -1,17 +1,19 @@
 import pandas as pd
+import matplotlib.pyplot as plt
+import re
+from collections import defaultdict
 
 # Load the data
 df = pd.read_csv('data/spring_2026_shows.csv')
 
-# Preview
-# print(df.columns)
-# df.head()
-
-import re
-
+# removes numbers and punctuation of words in "review" column of csv
 def clean_text(text):
-    text = str(text).lower()  # make lowercase
-    text = re.sub(r'[^a-z\s]', '', text)  # remove punctuation and numbers
+
+    # make lowercase
+    text = str(text).lower()  
+
+    # remove punctuation and numbers
+    text = re.sub(r'[^a-z\s]', '', text)  
     return text
 
 df['cleaned_review'] = df['Review'].apply(clean_text)
@@ -41,11 +43,6 @@ filtered_words = [word for word in all_words if word not in stop_words]
 
 # Count the most common remaining words
 word_freq = Counter(filtered_words)
-
-# View the top 30
-print(word_freq.most_common(30))
-
-from collections import defaultdict
 
 # Initialize counts
 category_counts = defaultdict(int)
@@ -87,17 +84,45 @@ for word in filtered_words:
     elif word in piece_words:
         category_counts["Pieces"] += 1
 
-# Print results
-print("Category Frequency:")
-for category, count in category_counts.items():
-    print(f"{category}: {count}")
 
-color_hits = [word for word in filtered_words if word in color_words]
-fabric_hits = [word for word in filtered_words if word in fabric_words]
-silhouette_hits = [word for word in filtered_words if word in silhouette_words]
-piece_hits = [word for word in filtered_words if word in piece_words]
+color_counts = Counter([word for word in filtered_words if word in color_words])
+fabric_counts = Counter([word for word in filtered_words if word in fabric_words])
+silhouette_counts = Counter([word for word in filtered_words if word in silhouette_words])
+piece_counts = Counter([word for word in filtered_words if word in piece_words])
 
-print("Top Colors:", Counter(color_hits).most_common(10))
-print("Top Fabrics:", Counter(fabric_hits).most_common(10))
-print("Top Silhouettes:", Counter(silhouette_hits).most_common(10))
-print("Top Pieces: ", Counter(piece_hits).most_common(10))
+# Sort by number of looks
+df_sorted = df.sort_values(by='Num Looks', ascending=False)
+
+# Create bar chart
+def looks_per_designer():
+    plt.figure(figsize=(12, 6))
+    plt.bar(df_sorted['Designer'], df_sorted['Num Looks'])
+
+    plt.title('Number of Looks per Designer – Spring 2026')
+    plt.xlabel('Designer')
+    plt.ylabel('Number of Looks')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+
+def plot_bar(counts, title, color=None):
+    items = dict(counts.most_common(10))
+    plt.figure(figsize=(10, 5))
+    plt.bar(items.keys(), items.values(), color=color)
+    plt.title(title)
+    plt.xlabel('Keyword')
+    plt.ylabel('Mentions')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+def main():
+    looks_per_designer()
+
+    # keyword bar charts
+    plot_bar(color_counts, 'Top Color Mentions', color='salmon')
+    plot_bar(fabric_counts, 'Top Fabric Mentions', color='lightblue')
+    plot_bar(silhouette_counts, 'Top Silhouette Mentions', color='plum')
+    plot_bar(piece_counts, 'Top Clothing Item Mentions', color='lightgreen')
+
+main()
