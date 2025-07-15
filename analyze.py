@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import re
 from collections import defaultdict
 from collections import Counter
@@ -92,26 +93,35 @@ def looks_per_designer():
     plt.tight_layout()
     plt.show()
 
-# creates bar chart for number of words in each descriptor category
-def plot_bar(counts, title, color=None):
+def plot_on_ax(ax, counts, title, color):
     items = dict(counts.most_common(10))
-    plt.figure(figsize=(10, 5))
-    plt.bar(items.keys(), items.values(), color=color)
-    plt.title(title)
-    plt.xlabel('Keyword')
-    plt.ylabel('Mentions')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
+    ax.bar(items.keys(), items.values(), color=color)
+    ax.set_title(title, fontsize=14)
+    ax.set_xticks(range(len(items)))
+    ax.set_xticklabels(items.keys(), rotation=45, ha='right')
+    ax.set_ylabel('Mentions')
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+
 
 def main():
     filtered_words = filter_words()
     looks_per_designer()
 
+    color_counts = get_counts(filtered_words, color_words)
+    fabric_counts = get_counts(filtered_words, fabric_words)
+    silhouette_counts = get_counts(filtered_words, silhouette_words)
+    piece_counts = get_counts(filtered_words, piece_words)
+    
     # keyword bar charts
-    plot_bar(get_counts(filtered_words, color_words), 'Top Color Mentions', color='salmon')
-    plot_bar(get_counts(filtered_words, fabric_words), 'Top Fabric Mentions', color='lightblue')
-    plot_bar(get_counts(filtered_words, silhouette_words), 'Top Silhouette Mentions', color='plum')
-    plot_bar(get_counts(filtered_words, piece_words), 'Top Clothing Item Mentions', color='lightgreen')
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+    plot_on_ax(axes[0, 0], color_counts, 'Color Mentions', 'salmon')
+    plot_on_ax(axes[0, 1], fabric_counts, 'Fabric Mentions', 'lightblue')
+    plot_on_ax(axes[1, 0], silhouette_counts, 'Silhouette Mentions', 'pink')
+    plot_on_ax(axes[1, 1], piece_counts, 'Clothing Item Mentions', 'lightgreen')
+
+    fig.suptitle('Top Fashion Keywords in Spring 2026 Runway Reviews', fontsize=16, y=1.03)
+    plt.tight_layout()
+    plt.show()
 
 main()
