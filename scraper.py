@@ -1,76 +1,93 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 import time
-import os
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-
-BASE_URL = 'https://www.vogue.com'
 HEADERS = {'User-Agent': 'Mozilla/5.0'}
-COLLECTION_URL = BASE_URL + '/fashion-shows/spring-2026-ready-to-wear'
 
-def get_show_links(collection_url):
-    response = requests.get(collection_url, headers=HEADERS)
-    soup = BeautifulSoup(response.content, 'lxml')
+# loads and reads data from Vogue website
+def get_show_links_selenium(collection_url):
+    print("Launching browser to get show links...")
 
-    shows = []
+    # launches web browser
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-    # 🔹 First: Highlighted shows (already working)
-    highlight_cards = soup.find_all('a', attrs={'data-testid': 'SummaryItemSimple'})
+    driver.get(collection_url)
 
-    # 🔹 Second: Latest shows (new selector)
-    latest_cards = soup.find_all('a', attrs={'data-recirc-pattern': 'summary-item'})
+    try:
+        # all shows are listed as links in a sidebar on vogue website
+        print("Waiting for sidebar to load...")
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'nav[data-testid="navigation"] ul'))
+        )
 
-    all_cards = highlight_cards + latest_cards
-    print(f"Found {len(all_cards)} total show links.")
+        # finds amount of links using css structure used in vogue website
+        links = driver.find_elements(By.CSS_SELECTOR, 'nav[data-testid="navigation"] ul li a')
+        print(f"Total links found: {len(links)}")
 
-    for card in all_cards:
-        href = card.get('href')
-        if not href or '/fashion-shows/' not in href:
-            continue
+        shows = []
+        seen = set()
 
-        h3 = card.find('h3')
-        if h3 is None:
-            print("Skipping due to missing <h3> in:")
-            print(card.prettify())  # ← this prints the entire HTML block
-            continue
+        # loops through all links found and gathers data from each article
+        for link in links:
+            href = link.get_attribute("href")
 
-        designer = h3.text.strip()
-        full_url = BASE_URL + href
+            if href and '/fashion-shows/' in href and href not in seen:
 
-        shows.append({
-            'designer': designer,
-            'url': full_url,
-            'image_url': None
-        })
+                # extract the last part of the URL as a fallback for the designer name
+                name = href.split("/")[-1].replace("-", " ").title()
+                full_url = href if href.startswith("http") else "https://www.vogue.com" + href
 
+                shows.append({
+                    'designer': name,
+                    'url': full_url,
+                    'image_url': None
+                })
 
-
-    return shows
+                seen.add(href)
 
 
+        print(f"Found {len(shows)} valid designer shows.")
+        return shows
+
+    except Exception as e:
+        print(f"Failed to load links: {e}")
+        return []
+
+    finally:
+        driver.quit()
+
+# scrapes the desired data for an individual show link
 def scrape_show_page(show):
     url = show['url']
     response = requests.get(url, headers=HEADERS)
     soup = BeautifulSoup(response.content, 'lxml')
 
-    # Title or collection name
+    # title or collection name
     try:
         url_parts = url.split('/')
         season = url_parts[4].replace('-', ' ').title()
         collection_name = f"{show['designer']} {season}"
-
     except:
-        title = 'N/A'
+        collection_name = f"{show['designer']} Unknown Season"
 
-    # Review text (usually near the top or in a review section)
+
+    # show review article text
     try:
         review_div = soup.find('div', class_='article__body')
         review = review_div.text.strip() if review_div else 'N/A'
     except:
         review = 'N/A'
 
-    # All look images (not just the cover)
+    # all show images
     image_urls = []
     try:
         images = soup.find_all('img')
@@ -81,6 +98,7 @@ def scrape_show_page(show):
     except:
         pass
 
+    # each links data is organized by these sections and later saved to csv
     return {
         'designer': show['designer'],
         'collection_url': url,
@@ -90,13 +108,23 @@ def scrape_show_page(show):
         'look_images': image_urls
     }
 
+# iterates through all links and scrapes desired data for each one
 def scrape_all_shows(show_links):
     all_data = []
     for i, show in enumerate(show_links):
+
+        # displays what show is currently being scraped
         print(f"Scraping {i+1}/{len(show_links)}: {show['designer']}")
-        show_data = scrape_show_page(show)
-        all_data.append(show_data)
-        time.sleep(1)  # Be polite to Vogue's servers
+
+        try:
+            show_data = scrape_show_page(show)
+            all_data.append(show_data)
+
+        except Exception as e:
+            print(f"Error scraping {show['designer']}: {e}")
+
+        # takes breaks to not alert vogue websites servers 
+        time.sleep(1)  
     return all_data
 
 def save_to_csv(data, filename='fashion_shows.csv'):
@@ -116,12 +144,11 @@ def save_to_csv(data, filename='fashion_shows.csv'):
     print(f"Data saved to {filename}")
 
 def main():
-    collection_url = 'https://www.vogue.com/fashion-shows/spring-2026-ready-to-wear'
-    #show_links = get_show_links(collection_url)
-    show_links = get_show_links(collection_url)
+    collection_url = "https://www.vogue.com/fashion-shows/spring-2025-ready-to-wear"
+    show_links = get_show_links_selenium(collection_url)
+
     all_shows = scrape_all_shows(show_links)
-    #all_shows = scrape_all_shows(show_links[:3])  # Only scrape first 3
-    save_to_csv(all_shows, filename='data/spring_2026_shows.csv')
+    save_to_csv(all_shows, filename='data/spring_2025_shows.csv')
 
 if __name__ == '__main__':
     main()
