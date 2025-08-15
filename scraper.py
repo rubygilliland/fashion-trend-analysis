@@ -143,13 +143,26 @@ def save_to_csv(data, filename='fashion_shows.csv'):
     df.to_csv(filename, index=False)
     print(f"Data saved to {filename}")
 
-def main():
-    collection_url = "https://www.vogue.com/fashion-shows/spring-2025-ready-to-wear"
+def run_scraper_for_season(season_string):
+    season_path = f"data/{season_string.replace('-', '_')}_shows.csv"
+    collection_url = f"https://www.vogue.com/fashion-shows/{season_string}"
+
     show_links = get_show_links_selenium(collection_url)
 
     all_shows = scrape_all_shows(show_links)
-    save_to_csv(all_shows, filename='data/spring_2025_shows.csv')
+    save_to_csv(all_shows, season_path)
+    return season_path
+
+'''
+def main():
+    collection_url = "https://www.vogue.com/fashion-shows/spring-2025-ready-to-wear"
+
+    show_links = get_show_links_selenium(collection_url)
+
+    all_shows = scrape_all_shows(show_links)
+    save_to_csv(all_shows, "spring_2025_shows.csv")
 
 if __name__ == '__main__':
     main()
+'''
 

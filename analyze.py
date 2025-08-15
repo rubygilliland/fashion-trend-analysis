@@ -1,8 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from matplotlib import rc
 import re
-from collections import defaultdict
 from collections import Counter
 
 
@@ -20,7 +20,13 @@ def clean_text(text):
 color_words = {
     'white', 'black', 'red', 'pink', 'blue', 'green', 'beige', 'brown', 'yellow',
     'orange', 'grey', 'gray', 'purple', 'gold', 'silver', 'neon', 'ivory', 'nude',
-    'metallic', 'cream', 'navy', 'khaki', 'pastel', 'pastels'
+    'metallic', 'cream', 'navy', 'khaki', 'pastel', 'pastels', 'blush', 'butteryellow',
+    'mocha', 'rose', 'fuchsia', 'coral', 'peach', 'teracotta', 'maroon', 'burgundy',
+    'lavender', 'lilac', 'periwinkle', 'mauve', 'maud', 'plum', 'teal', 'turquoise,'
+    'aqua', 'mint', 'seafoam', 'olive', 'forestgreen', 'moss', 'sage', 'camel', 'rust',
+    'ochre', 'mustard', 'sand', 'bronze', 'copper', 'charcoal', 'midnight', 'aubergine', 
+    'ink', 'wine', 'cerulean', 'skyblue', 'dustyblue', 'babypink', 'babyblue', 
+    'wispypink', 'dustypink', 'mintgreen', 'chocolatebrown'
 }
 
 # common fabric descriptors
@@ -28,13 +34,21 @@ fabric_words = {
     'cotton', 'linen', 'leather', 'denim', 'silk', 'satin', 'wool', 'lace',
     'tulle', 'knit', 'chiffon', 'sheer', 'mesh', 'velvet', 'organza', 'jersey',
     'tweed', 'fur', 'suede', 'nylon', 'cottons', 'transparent', 'wool', 'wools'
+    'cashmere', 'shearling', 'organza', 'jacquard', 'brocade', 'crepe', 'corduroy',
+    'canvas', 'netting', 'fleece', 'nylon', 'polyester', 'spandex', 'PVC', 'vinyl,'
+    'lycra', 'neoprene', 'taffeta', 'terrycloth', 'modal'
 }
 
 # common silhouette descriptors
 silhouette_words = {
     'fitted', 'oversized', 'voluminous', 'structured', 'flowy', 'cinched',
-    'asymmetrical', 'draped', 'tailored', 'boxy', 'cropped', 'highwaisted',
-    'pleated', 'puff', 'flared', 'layered', 'shift', 'sheath', 'wrap', 'slip'
+    'asymmetrical', 'draped', 'tailored', 'boxy', 'cropped', 'high waisted',
+    'pleated', 'puff', 'flared', 'layered', 'shift', 'sheath', 'wrap', 'slip',
+    'streamlined', 'relaxed', 'sculptural', 'ball gown', 'empire', 'mermaid',
+    'column', 'trumpet', 'peplum', 'biascut', 'wideleg', 'bootcut', 'straightleg',
+    'skinny', 'tapered', 'lowrise', 'baggy', 'caped', 'strapless', 'low-rise'
+    'offtheshoulder', 'dolman', 'raglan', 'high-waisted', 'off-the-shoulder',
+    'mini', 'maxi', 'midi', 'bodycon'
 }
 
 # common piece descriptors
@@ -43,71 +57,179 @@ piece_words = {
     'blouse', 'blouses', 'skirt', 'skirts', 'tank', 'tanks', 'boot', 'boots', 
     'hat', 'hats', 'heels', 'sneakers', 'trainers', 'glasses', 'sunglasses', 'scarf',
     'scarves', 'cargo', 'pants', 'jeans', 'blazer', 'blazers', 'tee', 'tees', 'sweater', 
-    'sweaters', 't-shirt', 'vest', 'sweatshirt', 'sweatshirts'
+    'sweaters', 't-shirt', 'vest', 'sweatshirt', 'sweatshirts', 'microshorts', 'micro-shorts'
+    'coat', 'coats', 'trench', 'trenchcoat', 'overcoat', 'cardigan', 'cardigans',
+    'bralette', 'bodysuit', 'gown', 'kimono', 'parka', 'pullover', 'romper', 'jumpsuit',
+    'suit', 'suits', 'cape', 'cloak', 'glove', 'gloves', 'loafer', 'loafers', 'mule', 'mules',
+    'sandals', 'slides', 'slippers', 'clogs', 'turtleneck', 'turtlenecks', 'legging', 'leggings',
+    'miniskirt', 'mini-skirt', 'miniskirts', 'mini-skirts', 
+}
+
+# common details
+details_words = {
+    'buttons', 'zippers', 'snaps', 'ties', 'hookandeye', 'lacing', 'buckles', 'drawstrings',
+    'pleats', 'darts', 'slits', 'cutouts', 'ruching', 'gathering', 'draping', 'boning',
+    'vents', 'padding', 'seams', 'paneling', 'piping', 'tie-dye', 'ruched', 'graphics'
+    'ruffles', 'frills', 'bows', 'feathers', 'sequins', 'beads', 'crystals', 'graphic',
+    'embroidery', 'applique', 'fringe', 'studs', 'grommets', 'rosettes', 'quilting', 'smocking',
+    'rawedges', 'distressing', 'metallicfinish', 'highshine', 'matte', 'gloss',
+    'fading', 'tiedye', 'prints', 'patterns', 'patchwork', 'lasercut', 'flocking'
+}
+
+# common patterns
+pattern_words = {
+    'floral', 'paisley', 'plaid', 'tartan', 'houndstooth', 'check', 'gingham',
+    'stripe', 'pinstripe', 'polkadot', 'dot', 'animalprint', 'leopard', 'zebra', 'snake',
+    'camouflage', 'camo', 'geometric', 'abstract', 'tie-dye', 'ombre',
+    'graphic', 'logo', 'monogram', 'text', 'artprint', 'patchwork', 'colorblock',
+    'laceprint', 'brocade', 'ikat', 'chevron', 'marble', 'swirl', 'wave',
+    'mesh', 'net', 'grid', 'argyle', 'jacquard', 'printmixing'
 }
 
 # gets counts for all words in a category (color, fabric, etc.)
-def get_counts(review, category):
-    return Counter([word for word in review.split() if word in category])
+def get_counts(review):
+    review_lst = review.split()
 
-# gathers and plots category data for given dataset/season
+    # creates keywords dictionary for easy looping
+    keywords = {'colors': color_words, 'fabrics': fabric_words, 'silhouettes': silhouette_words, 
+                'pieces': piece_words, 'patterns': pattern_words, 'details': details_words}
+    
+    counts = {}
+
+    # iterates over every keywords collection
+    for name, category in keywords.items():
+
+        # counts num of words mentioned in each keyword group
+        num = Counter([word for word in review_lst if word in category])
+
+        # adds to counts dictionary for each word
+        counts[name] = num
+
+    return counts
+
+# organizes and plots category data for single given dataset/season
 def top_category_mentions(review, season):
-    color_counts = get_counts(review, color_words)
-    fabric_counts = get_counts(review, fabric_words)
-    silhouette_counts = get_counts(review, silhouette_words)
-    piece_counts = get_counts(review, piece_words)
+
+    # sets font for display
+    rc('font', **{'family': "Times New Roman"}) 
 
     # configures display grid for multiple data plots
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig, axes = plt.subplots(nrows = 2, ncols = 3, figsize = (12, 8))
 
     # adds a title to the grid
-    fig.suptitle('Top Fashion Keywords in ' + season + ' Runway Reviews', fontsize=16, y=0.95)
+    fig.suptitle('Top Fashion Keywords in ' + season + ' Runway Reviews', fontsize=16, y=0.99)
 
     # plots data on grid for all categories
-    plot_data(axes[0, 0], color_counts, 'Color Mentions', 'salmon')
-    plot_data(axes[0, 1], fabric_counts, 'Fabric Mentions', 'lightblue')
-    plot_data(axes[1, 0], silhouette_counts, 'Silhouette Mentions', 'pink')
-    plot_data(axes[1, 1], piece_counts, 'Clothing Item Mentions', 'lightgreen')
+    counts = get_counts(review)
+    plot_data(axes[0, 0], counts.get('colors'), 'Color Mentions', '#FFEDF1', False)
+    plot_data(axes[0, 1], counts.get('fabrics'), 'Fabric Mentions', '#EBCFCC', False)
+    plot_data(axes[0, 2], counts.get('details'), 'Detail Mentions', '#EADCDC', False)
+    plot_data(axes[1, 0], counts.get('silhouettes'), 'Silhouette Mentions', '#E8D6D4', False)
+    plot_data(axes[1, 1], counts.get('pieces'), 'Clothing Item Mentions', '#F4EBE9', False)
+    plot_data(axes[1, 2], counts.get('patterns'), 'Pattern Mentions', '#FFEDED', False)
 
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.tight_layout()
     plt.show()
 
-# plots given data on grid
-def plot_data(ax, counts, title, color):
-    items = dict(counts.most_common(10))
+# organizes, plots, and compares top data from two datasets/seasons
+def compare_mentions(review_1, season_1, review_2, season_2):
 
-    ax.bar(items.keys(), items.values(), color=color)
+    # sets font for display
+    rc('font', **{'family': "Times New Roman"}) 
 
-    ax.set_title(title, fontsize=14)
+    # configures display grid for multiple data plots
+    fig, axes = plt.subplots(nrows = 2, ncols = 3, figsize = (12, 8))
+
+    # adds title to grid
+    fig.suptitle('Comparison of Top Fashion Keywords in ' + season_1 + ' and ' + season_2 + ' Runway Reviews', 
+                   fontsize = 16, y = 0.99)
     
-    ax.set_xticks(range(len(items)))
-    ax.set_xticklabels(items.keys(), rotation=45, ha='right')
+    # gets counters for each review
+    counts_1 = get_counts(review_1)
+    counts_2 = get_counts(review_2)
+
+    # plots data for each keyword category for both reviews
+    plot_data(axes[0, 0], counts_1.get('colors'), 'Top Colors', '#FFEDF1', True, counts_2.get('colors'))
+    plot_data(axes[0, 1], counts_1.get('fabrics'), 'Top Fabrics', '#FFEDF1', True, counts_2.get('fabrics'))
+    plot_data(axes[0, 2], counts_1.get('details'), 'Top Details', '#FFEDF1', True, counts_2.get('details'))
+    plot_data(axes[1, 0], counts_1.get('silhouettes'), 'Top Silhouettes', '#FFEDF1', True, counts_2.get('silhouettes'))
+    plot_data(axes[1, 1], counts_1.get('pieces'), 'Top Pieces', '#FFEDF1', True, counts_2.get('pieces'))
+    plot_data(axes[1, 2], counts_1.get('patterns'), 'Top Patterns', '#FFEDF1', True, counts_2.get('patterns'))
+
+    plt.tight_layout()
+    plt.show()
+    
+    
+# plots given data on grid
+# counts_2 is optional as is only used when comparing two data sets
+def plot_data(ax, counts_1, title, color, compare, counts_2 = {}):
+
+    # for comparing two data sets
+    if compare:
+
+        # gets top keywords for current category of each season
+        common_1 = counts_1.most_common(1)
+        common_2 = counts_2.most_common(1)
+
+        # uses two distinct colors for each season
+        colors = [color, '#EBCFCC']
+
+        # plots the bars for each season
+        ax.bar(['S1', 'S2'],  [common_1[0][1], common_2[0][1]],  color = colors)
+
+        # adds labels and tickers
+        ax.set_xticks(range(2))
+        ax.set_xticklabels([common_1[0][0], common_2[0][0]], rotation=45, ha='right')
+       
+    # for analyzing a single season
+    else:
+
+        # gets top 10 words for each keyword category
+        items = dict(counts_1.most_common(10))
+
+        # creates bar for each word
+        ax.bar(items.keys(), items.values(), color=color)
+
+        # adds labels and tickers
+        ax.set_xticks(range(len(items)))
+        ax.set_xticklabels(items.keys(), rotation=45, ha='right')
+
+    # adds titles
+    ax.set_title(title, fontsize=14)
     ax.set_ylabel('Mentions')
     ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+
+# cleans up review text
+def get_clean_rev(csv_path):
+
+    # reads in review from csv
+    df = pd.read_csv(csv_path)
+
+    # changes review to cleaned review using clean_text function
+    df['Cleaned Review'] = df['Review'].apply(clean_text)
+
+    # creates text of clean review
+    clean_review = ' '.join([str(r) for r in df['Cleaned Review'].dropna()])
+    return clean_review
+
+# used to analyze a single season
+def analyze_season(csv_path, season):
+    clean_review = get_clean_rev(csv_path)
+    top_category_mentions(clean_review, season)
+
+# used to compare two seasons
+def compare_seasons(csv_path_1, season_1, csv_path_2, season_2):
+    clean_review_1 = get_clean_rev(csv_path_1)
+    clean_review_2 = get_clean_rev(csv_path_2)
+    compare_mentions(clean_review_1, season_1, clean_review_2, season_2)
 
 
 def main():
     # Load the data
-    spring_25 = pd.read_csv('data/spring_2025_shows.csv')
-    spring_26 = pd.read_csv('data/spring_2026_shows.csv')
 
-    # add 'Season' column
-    spring_25['Season'] = 'Spring 2025'
-    spring_26['Season'] = 'Spring 2026'
+    #analyze_season('data/spring_2025_shows.csv', 'Spring 2025')
+    #analyze_season('data/spring_2024_ready_to_wear_shows.csv', 'Spring 2024')
 
-    # combine data
-    combined = pd.concat([spring_25, spring_26], ignore_index=True)
-    combined.to_csv('data/all_spring_shows.csv', index=False)
-
-    # clean reviews from each file
-    spring_25['Cleaned Review'] = spring_25['Review'].apply(clean_text)
-    spring_26['Cleaned Review'] = spring_26['Review'].apply(clean_text)
-    combined['Cleaned Review'] = combined['Review'].apply(clean_text)
- 
-    all_sp25_reviews = ' '.join(spring_25["Cleaned Review"])
-    top_category_mentions(all_sp25_reviews, "Spring 2025")
-
-    all_sp26_reviews = ' '.join(spring_26['Cleaned Review'])
-    top_category_mentions(all_sp26_reviews, "Spring 2026")
+    compare_seasons('data/spring_2024_ready_to_wear_shows.csv', 'Spring 2024', 'data/spring_2025_shows.csv', 'Spring 2025')
 
 main()
