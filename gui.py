@@ -1,58 +1,290 @@
 import tkinter as tk
 from tkinter import messagebox
-from tkinter import font
 from scraper import run_scraper_for_season  
-from analyze import analyze_season  
+from analyze import analyze_single_season
+from analyze import compare_seasons
+from plot import plot_single_season
+from plot import plot_compared_seasons
+import threading
+from tkinter import ttk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-BG_COLOR = "#ebcfcc"
-LAYER_COLOR = "#ece4d9"
-TEXT_COLOR = "#0D1B2A"
+# creates and displays main frame that holds all pages
+class FashionTrendAnalyzer(tk.Tk):
+    def __init__(self):
+        super().__init__()
 
-ENTRY_WIDTH = 30
+        self.title("Fashion Trend Analyzer")
 
-def run_pipeline():
-    season = entry.get().strip().lower().replace(" ", "-")    
-    if not season:
-        messagebox.showwarning("Missing Input", "Please enter a season.")
-        return
+        # pink background color
+        self.configure(bg="#EECACA")  
 
-    try:
-        status_label.config(text="Gathering data . . .")
-        root.update()
-        csv_path = run_scraper_for_season(season)
-        status_label.config(text = "Analyzing data . . .")
-        analyze_season(csv_path, season)
-        status_label.config(text = "Data collected & analyzed")
-    except Exception as e:
-        messagebox.showerror("Error", str(e))
-        status_label.config(text="Something went wrong.")
+        # creates large rigid frame size
+        self.geometry("1000x800")   
+        self.resizable(False, False) 
 
-# root window (initial pop-up)
-root = tk.Tk()
-root.title("Fashion Trend Analyzer")
-root.geometry("350x200")
-root.configure(bg = BG_COLOR)
-root.resizable(False, False)
+        # container to hold all pages
+        container = tk.Frame(self)
+        container.pack(fill="both", expand=True)
 
-# layer (for added color)
-frame = tk.Frame(root, bg=LAYER_COLOR, bd=0, relief="flat")
-frame.place(relx=0.5, rely=0.5, anchor="center", width=325, height=175)
+        # allows for positioning of widgets on grid
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
 
-# label
-title_font = font.Font(family = "Times", size = 17, weight = "bold", slant = "roman")
-label = tk.Label(frame, text="Enter Vogue Runway Show", font=title_font, bg = LAYER_COLOR)
-label.pack(pady=(15, 10))
+        self.frames = {}
 
-# text box
-entry = tk.Entry(frame, font=("Helvetica", 12), bg = BG_COLOR , fg=TEXT_COLOR, width=ENTRY_WIDTH, justify="center", relief="flat")
-entry.insert(0, "")
-entry.pack(pady=5)
+        # standardizes setup for page classes
+        for F in (StartPage, AnalyzeOneSeasonPage, CompareTwoSeasonsPage, LoadingPage, ResultsPage):
+            frame = F(container, self)
+            self.frames[F] = frame
+            frame.grid(row=0, column=0, sticky="nsew")
 
-button = tk.Button(frame, text="Analyze", font=("Helvetica", 11), bg=BG_COLOR, fg=TEXT_COLOR, width=15, command=run_pipeline, relief="flat")
-button.pack(pady=10)
+        self.show_frame(StartPage)
 
-# status label
-status_label = tk.Label(frame, text="", bg = LAYER_COLOR)
-status_label.pack(pady=5)
+    # initializes display of frames
+    def show_frame(self, page):
+        frame = self.frames[page]
+        frame.tkraise()
 
-root.mainloop()
+# Page 1 - title and navigation buttons
+class StartPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg="#EECACA")
+
+        title = tk.Label(self, text="FASHION TREND ANALYZER", font=("Arial", 24, "bold"), bg="#EECACA")
+        title.pack(pady=(220, 10))
+
+        subtitle = tk.Label(self, text="using VOGUE runway data", font=("Times", 12, "bold", "italic"), bg="#EECACA")
+        subtitle.pack(pady=(0,10))
+
+        # upon action displays AnalyzeOneSeasonPage
+        analyze_btn = tk.Button(self, text="analyze a show", font=("Times", 12), width=25,
+                                command=lambda: controller.show_frame(AnalyzeOneSeasonPage))
+        analyze_btn.pack(pady=20)
+
+        # upon action displays CompareTwoSeasonsPage
+        compare_btn = tk.Button(self, text="compare two shows", font=("Times", 12), width=25,
+                                command=lambda: controller.show_frame(CompareTwoSeasonsPage))
+        compare_btn.pack(pady=10)
+
+
+# Page 2 - Runs analysis and plots data for a single runway season
+class AnalyzeOneSeasonPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg="#EECACA")
+
+        label = tk.Label(self, text="ENTER VOGUE RUNWAY SEASON TO ANALYZE", 
+                         font=("Arial", 18, "bold"), bg="#EECACA")
+        label.pack(pady=(220, 20))
+
+        # entry text box for user to type existing Vogue runway season name into
+        self.entry = tk.Entry(self, font=("Times", 12, "italic"), width=30)
+        self.entry.pack(pady=10)
+
+        # upon action calls run_analysis function
+        analyze_btn = tk.Button(self, text="Analyze", font=("Times", 12), width=20, 
+                                command=lambda: self.run_analysis(controller))
+        analyze_btn.pack(pady=10)
+
+        # upon action displays start page
+        back_btn = tk.Button(self, text="Back", font=("Times", 12), command=lambda: controller.show_frame(StartPage))
+        back_btn.pack(pady=10)
+
+    # formats user-input and begins threading
+    def run_analysis(self, controller):
+
+        # formats user input for web search usability (to be used in scraper)
+        show_name = self.entry.get().strip().lower().replace(" ", "-")
+
+        # gives warning message if no input is provided
+        if not show_name:
+            messagebox.showwarning("Missing Input", "Please enter a season.")
+            return
+
+        # displays loading page
+        controller.show_frame(LoadingPage)
+
+        # begins threading so data can be analyzed in backend while loading bar progesses on UI
+        thread = threading.Thread(target=self.run_pipeline, args=(show_name, controller), daemon=True)
+        thread.start()
+
+    # runs necessary functions for gathering desired data
+    def run_pipeline(self, season, controller):
+        try:
+
+            # loading page process begins
+            loading_page = controller.frames[LoadingPage]
+            controller.after(0, loading_page.label.config, {"text": "Gathering data . . ."})
+
+            # allows scraping data to be displayed on loading page
+            def progress_callback(current, total, show_name):
+                controller.after(0, loading_page.update_status, current, total, show_name)
+
+            # runs scraper to gather a csv file path for parsing
+            csv_path = run_scraper_for_season(season, progress_callback=progress_callback)
+
+            # changes loading page title
+            controller.after(0, loading_page.label.config, {"text": "Analyzing data . . ."})
+            results = analyze_single_season(csv_path)  
+
+            # when data is loaded result page is displayed
+            results_page = controller.frames[ResultsPage]
+            controller.after(0, results_page.display_results, results, season)
+            controller.after(0, controller.show_frame, ResultsPage)
+
+        # error message displays if error occurs in scraping proccess
+        except Exception as e:
+            controller.after(0, messagebox.showerror, "Error", str(e))
+
+# Page 3 - runs analysis and plots data for a comparison of two seasons
+class CompareTwoSeasonsPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg="#EECACA")
+
+        label = tk.Label(self, text="ENTER VOGUE RUNWAY SHOWS TO COMPARE", 
+                         font=("Arial", 18, "bold"), bg="#EECACA")
+        label.pack(pady=(220, 20))
+
+        # entry text box for user to type existing Vogue runway season name into
+        self.entry1 = tk.Entry(self, font=("Times", 12, "italic"), width=30)
+        self.entry1.pack(pady=5)
+
+        # entry text box for user to type a different existing Vogue runway season name into
+        self.entry2 = tk.Entry(self, font=("Times", 12, "italic"), width=30)
+        self.entry2.pack(pady=5)
+
+        # upon action calls run_analysis function
+        analyze_btn = tk.Button(self, text="Analyze", font=("Times", 12), width=20, 
+                                command=lambda:self.run_analysis(controller))
+        analyze_btn.pack(pady=10)
+
+        # upon action displays start page
+        back_btn = tk.Button(self, text="Back", font=("Times", 12), command=lambda: controller.show_frame(StartPage))
+        back_btn.pack(pady=10)
+
+    def run_analysis(self, controller):
+
+        # formats user input for web search usability (to be used in scraper)
+        season_1 = self.entry1.get().strip().lower().replace(" ", "-")
+        season_2 = self.entry2.get().strip().lower().replace(" ", "-")
+
+        # gives warning message if no input is provided
+        if not season_1 or not season_2:
+            messagebox.showwarning("Missing Input", "Please enter a season.")
+            return
+
+        # displays loading page
+        controller.show_frame(LoadingPage)
+
+        # begins threading so data can be analyzed in backend while loading bar progesses on UI
+        thread = threading.Thread(target=self.run_pipeline, args=(season_1, season_2, controller), daemon=True)
+        thread.start()
+
+    def run_pipeline(self, season_1, season_2, controller):
+        try:
+
+            # loading page process begins
+            loading_page = controller.frames[LoadingPage]
+            controller.after(0, loading_page.label.config, {"text": "Gathering season one data . . ."})
+
+            # allows scraping data to be displayed on loading page
+            def progress_callback(current, total, show_name):
+                controller.after(0, loading_page.update_status, current, total, show_name)
+
+            # runs scraper to gather a csv file path for parsing
+            csv_path_1 = run_scraper_for_season(season_1, progress_callback=progress_callback)
+
+            # loading page displays that season two data scraping has begun
+            controller.after(0, loading_page.label.config, {"text": "Gathering season two data . . ."})
+
+            # runs scraper to gather a csv file path for parsing
+            csv_path_2 = run_scraper_for_season(season_2, progress_callback=progress_callback)
+
+            # changes text displayed on loading page
+            controller.after(0, loading_page.label.config, {"text": "Analyzing data . . ."})
+            results = compare_seasons(csv_path_1, csv_path_2)  
+
+            # when data is loaded result page is displayed
+            results_page = controller.frames[ResultsPage]
+            controller.after(0, results_page.display_results, results[0], season_1, True, results[1], season_2)
+            controller.after(0, controller.show_frame, ResultsPage)
+
+        # error message displays if error occurs in scraping proccess
+        except Exception as e:
+            controller.after(0, messagebox.showerror, "Error", str(e))
+
+# Page 4 - Results Page that displays final matplotlib plots of data
+class ResultsPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg="#F5E9E9")
+
+        # title of page
+        self.label = tk.Label(self, text="Analysis Results", font=("Arial", 18, "bold"), bg = 'white')
+        self.label.pack(pady=5)
+
+        # adds frame to place matplotlib plot onto
+        self.plot_frame = tk.Frame(self, bg="#F5E9E9")
+        self.plot_frame.pack(expand=True)
+
+        # upon interaction displays start page
+        back_btn = tk.Button(self, text="Back to Start", command=lambda: controller.show_frame(StartPage))
+        back_btn.pack(pady=20)
+
+    def display_results(self, results_1, season_1, compare, results_2= '', season_2 = ''):
+
+        # removes any existing plots from frame
+        for widget in self.plot_frame.winfo_children():
+            widget.destroy()
+        
+        # if season comparison was made display comparison graphs
+        if compare:
+            fig = plot_compared_seasons(results_1, season_1, results_2, season_2)
+
+        # if single season was analyzed display single season graphs
+        else:
+            fig = plot_single_season(results_1, season_1)
+
+        canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+# Temp Page
+class LoadingPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg="#E8C5C5")
+
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        content = tk.Frame(self, bg="#E8C5C5")
+        content.pack(expand=True)
+
+        # initialize loading page label
+        self.label = tk.Label(content, text="",
+                              font=("Arial", 18, "bold"), bg="#E8C5C5")
+        self.label.pack(pady=(2, 20))
+        
+        # initialize subtitle
+        self.sublabel = tk.Label(content, text="", font=("Times", 12, "italic"), bg="#E8C5C5")
+        self.sublabel.pack(pady=5)
+
+        # set loading bar color to pink
+        s = ttk.Style()
+        s.theme_use('clam')
+        s.configure('pink.Horizontal.TProgressbar', background="#E8C5C5")
+
+        # create progressive loading bar
+        self.progress = ttk.Progressbar(content, orient="horizontal",
+                        length=300, style = 'pink.Horizontal.TProgressbar', mode="determinate")
+        self.progress.pack(pady=10)
+    
+    # update loading bar and sublabel dynamically
+    def update_status(self, current, total, show_name):
+        self.sublabel.config(text=f"Loading Show {current}/{total}: {show_name}")
+        self.progress["value"] = (current / total) * 100
+
+
+if __name__ == "__main__":
+    app = FashionTrendAnalyzer()
+    app.mainloop()
+

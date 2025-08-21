@@ -109,10 +109,11 @@ def scrape_show_page(show):
     }
 
 # iterates through all links and scrapes desired data for each one
-def scrape_all_shows(show_links):
+def scrape_all_shows(show_links, progress_callback=None):
     all_data = []
     for i, show in enumerate(show_links):
-
+        if progress_callback:
+            progress_callback(i+1, len(show_links), show['designer'])
         # displays what show is currently being scraped
         print(f"Scraping {i+1}/{len(show_links)}: {show['designer']}")
 
@@ -143,26 +144,15 @@ def save_to_csv(data, filename='fashion_shows.csv'):
     df.to_csv(filename, index=False)
     print(f"Data saved to {filename}")
 
-def run_scraper_for_season(season_string):
+def run_scraper_for_season(season_string, progress_callback=None):
     season_path = f"data/{season_string.replace('-', '_')}_shows.csv"
     collection_url = f"https://www.vogue.com/fashion-shows/{season_string}"
 
     show_links = get_show_links_selenium(collection_url)
 
-    all_shows = scrape_all_shows(show_links)
+    all_shows = scrape_all_shows(show_links, progress_callback=progress_callback)
     save_to_csv(all_shows, season_path)
     return season_path
 
-'''
-def main():
-    collection_url = "https://www.vogue.com/fashion-shows/spring-2025-ready-to-wear"
 
-    show_links = get_show_links_selenium(collection_url)
-
-    all_shows = scrape_all_shows(show_links)
-    save_to_csv(all_shows, "spring_2025_shows.csv")
-
-if __name__ == '__main__':
-    main()
-'''
 
