@@ -16,7 +16,11 @@ Built with Tkinter, Matplotlib, and Pandas, this program allows users to scrape,
    git clone https://github.com/ruby-gilliland/fashion-trend-analysis.git
    cd fashion-trend-analysis
 2. Install dependencies
+   ```bash
    pip install -r requirements.txt
+4. Run gui.py
+   ```bash
+   python gui.py
 
 
 
