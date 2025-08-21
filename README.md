@@ -21,6 +21,15 @@ Built with Tkinter, Matplotlib, and Pandas, this program allows users to scrape,
 4. Run gui.py
    ```bash
    python gui.py
+5. Choose analysis and type an existing Vogue runway season into textbox(es)
+
+# SCREENSHOTS
+
+<img width="872" height="638" alt="image" src="https://github.com/user-attachments/assets/a231da89-dbae-47d6-a254-a66d3d549597" />
+<img width="990" height="548" alt="image" src="https://github.com/user-attachments/assets/227e3e4f-46a7-4323-850a-f00cbd509d19" />
+<img width="895" height="486" alt="image" src="https://github.com/user-attachments/assets/5ef7b9a7-ac51-4892-aaa9-92bf1f732b1e" />
+
+
 
 
 
