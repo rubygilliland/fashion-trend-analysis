@@ -1,11 +1,10 @@
-import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-import time
+import time, random, requests
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -65,6 +64,7 @@ def get_show_links_selenium(collection_url):
     finally:
         driver.quit()
 
+'''
 # scrapes the desired data for an individual show link
 def scrape_show_page(show):
     url = show['url']
@@ -107,13 +107,65 @@ def scrape_show_page(show):
         'review': review,
         'look_images': image_urls
     }
+'''
+
+# scrapes the desired data for an individual show link
+def scrape_show_page(show):
+    url = show['url']
+    response = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(response.content, 'lxml')
+
+    # title or collection name
+    try:
+        url_parts = url.split('/')
+        season = url_parts[4].replace('-', ' ').title()
+        collection_name = f"{show['designer']} {season}"
+    except:
+        collection_name = f"{show['designer']} Unknown Season"
+
+    # show review article text
+    try:
+        review_div = soup.find('div', class_='article__body')
+        review = review_div.text.strip() if review_div else 'N/A'
+    except:
+        review = 'N/A'
+
+    # cover image (from meta og:image tag)
+    try:
+        og_image = soup.find("meta", property="og:image")
+        cover_image = og_image["content"] if og_image else None
+    except:
+        cover_image = None
+
+    # all show images (look images)
+    image_urls = []
+    try:
+        images = soup.find_all('img')
+        for img in images:
+            src = img.get('src')
+            if src and 'photos/' in src and 'runway' in src:
+                image_urls.append(src)
+    except:
+        pass
+
+    # return organized data
+    return {
+        'designer': show['designer'],
+        'collection_url': url,
+        'cover_image': cover_image,
+        'collection_name': collection_name,
+        'review': review,
+        'look_images': image_urls
+    }
+
 
 # iterates through all links and scrapes desired data for each one
 def scrape_all_shows(show_links, progress_callback=None):
     all_data = []
     for i, show in enumerate(show_links):
         if progress_callback:
-            progress_callback(i+1, len(show_links), show['designer'])
+            progress_callback(i+1, len(show_links), show['designer'], show['image_url'])
+        
         # displays what show is currently being scraped
         print(f"Scraping {i+1}/{len(show_links)}: {show['designer']}")
 
@@ -124,7 +176,7 @@ def scrape_all_shows(show_links, progress_callback=None):
         except Exception as e:
             print(f"Error scraping {show['designer']}: {e}")
 
-        # takes breaks to not alert vogue websites servers 
+        # takes randomized breaks to not alarm vogue websites servers 
         time.sleep(1)  
     return all_data
 

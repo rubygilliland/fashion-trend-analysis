@@ -26,6 +26,7 @@ def plot_single_season(counts, season):
     plot_data(axes[1, 2], counts.get('patterns'), 'Pattern Mentions', '#FFEDED', False)
 
     plt.tight_layout()
+    #plt.show()
     return fig
 
 # organizes, plots, and compares top data from two datasets/seasons
@@ -54,6 +55,7 @@ def plot_compared_seasons(counts_1, season_1, counts_2, season_2):
     plot_data(axes[1, 2], counts_1.get('patterns'), 'Top Patterns', '#FFEDF1', True, counts_2.get('patterns'))
 
     plt.tight_layout()
+    #plt.show()
     return fig
     
     

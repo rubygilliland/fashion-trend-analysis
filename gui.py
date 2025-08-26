@@ -1,13 +1,14 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 from scraper import run_scraper_for_season  
-from analyze import analyze_single_season
-from analyze import compare_seasons
-from plot import plot_single_season
-from plot import plot_compared_seasons
-import threading
-from tkinter import ttk
+from analyze import analyze_single_season, compare_seasons
+from plot import plot_single_season, plot_compared_seasons
+import threading, requests, matplotlib
+from io import BytesIO
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from PIL import ImageTk, Image
+matplotlib.use("TkAgg")
+
 
 # creates and displays main frame that holds all pages
 class FashionTrendAnalyzer(tk.Tk):
@@ -117,8 +118,8 @@ class AnalyzeOneSeasonPage(tk.Frame):
             controller.after(0, loading_page.label.config, {"text": "Gathering data . . ."})
 
             # allows scraping data to be displayed on loading page
-            def progress_callback(current, total, show_name):
-                controller.after(0, loading_page.update_status, current, total, show_name)
+            def progress_callback(current, total, show_name, cover_url):
+                controller.after(0, loading_page.update_status, current, total, show_name, cover_url)
 
             # runs scraper to gather a csv file path for parsing
             csv_path = run_scraper_for_season(season, progress_callback=progress_callback)
@@ -129,7 +130,7 @@ class AnalyzeOneSeasonPage(tk.Frame):
 
             # when data is loaded result page is displayed
             results_page = controller.frames[ResultsPage]
-            controller.after(0, results_page.display_results, results, season)
+            controller.after(0, results_page.display_results, results, season, False)
             controller.after(0, controller.show_frame, ResultsPage)
 
         # error message displays if error occurs in scraping proccess
@@ -188,8 +189,8 @@ class CompareTwoSeasonsPage(tk.Frame):
             controller.after(0, loading_page.label.config, {"text": "Gathering season one data . . ."})
 
             # allows scraping data to be displayed on loading page
-            def progress_callback(current, total, show_name):
-                controller.after(0, loading_page.update_status, current, total, show_name)
+            def progress_callback(current, total, show_name, cover_url):
+                controller.after(0, loading_page.update_status, current, total, show_name, cover_url)
 
             # runs scraper to gather a csv file path for parsing
             csv_path_1 = run_scraper_for_season(season_1, progress_callback=progress_callback)
@@ -219,12 +220,12 @@ class ResultsPage(tk.Frame):
         super().__init__(parent, bg="#F5E9E9")
 
         # title of page
-        self.label = tk.Label(self, text="Analysis Results", font=("Arial", 18, "bold"), bg = 'white')
+        self.label = tk.Label(self, text="Analysis Results", font=("Arial", 18, "bold"), bg = "#F5E9E9")
         self.label.pack(pady=5)
 
         # adds frame to place matplotlib plot onto
         self.plot_frame = tk.Frame(self, bg="#F5E9E9")
-        self.plot_frame.pack(expand=True)
+        self.plot_frame.pack(expand=True, fill = tk.BOTH)
 
         # upon interaction displays start page
         back_btn = tk.Button(self, text="Back to Start", command=lambda: controller.show_frame(StartPage))
@@ -268,6 +269,9 @@ class LoadingPage(tk.Frame):
         self.sublabel = tk.Label(content, text="", font=("Times", 12, "italic"), bg="#E8C5C5")
         self.sublabel.pack(pady=5)
 
+        self.image_label = tk.Label(content, bg="#E8C5C5")
+        self.image_label.pack(pady=5)
+
         # set loading bar color to pink
         s = ttk.Style()
         s.theme_use('clam')
@@ -277,11 +281,27 @@ class LoadingPage(tk.Frame):
         self.progress = ttk.Progressbar(content, orient="horizontal",
                         length=300, style = 'pink.Horizontal.TProgressbar', mode="determinate")
         self.progress.pack(pady=10)
+
+        self._current_img = None
     
     # update loading bar and sublabel dynamically
-    def update_status(self, current, total, show_name):
+    def update_status(self, current, total, show_name, cover_url=None):
         self.sublabel.config(text=f"Loading Show {current}/{total}: {show_name}")
         self.progress["value"] = (current / total) * 100
+
+        if cover_url:
+                try:
+                    response = requests.get(cover_url, timeout=5)
+                    response.raise_for_status()
+                    print(f"Fetching cover for {show_name}: {cover_url}, status={response.status_code}")
+                    pil_img = Image.open(BytesIO(response.content)).resize((200, 300))
+                    self._current_img = ImageTk.PhotoImage(pil_img)
+                    self.image_label.config(image=self._current_img)
+                    self.update_idletasks()  # force refresh
+
+                except Exception as e:
+                    print(f"Could not load cover image for {show_name}: {e}")
+                    self.image_label.config(image="")  # fallback: clear image
 
 
 if __name__ == "__main__":
