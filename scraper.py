@@ -130,23 +130,18 @@ def scrape_show_page(show):
     except:
         review = 'N/A'
 
-    # cover image (from meta og:image tag)
     try:
-        og_image = soup.find("meta", property="og:image")
-        cover_image = og_image["content"] if og_image else None
+        # Find the <img> tag
+        all_images = soup.find_all("img", class_="ResponsiveImageContainer-eNxvmU cfBbTk responsive-image__image")
+        img_tag = all_images[3]
+
+        # Grab the URL
+        if img_tag and soup.find_all():
+            # Either the main src
+            cover_image = img_tag.get("src")
+            
     except:
         cover_image = None
-
-    # all show images (look images)
-    image_urls = []
-    try:
-        images = soup.find_all('img')
-        for img in images:
-            src = img.get('src')
-            if src and 'photos/' in src and 'runway' in src:
-                image_urls.append(src)
-    except:
-        pass
 
     # return organized data
     return {
@@ -155,7 +150,6 @@ def scrape_show_page(show):
         'cover_image': cover_image,
         'collection_name': collection_name,
         'review': review,
-        'look_images': image_urls
     }
 
 
@@ -163,14 +157,16 @@ def scrape_show_page(show):
 def scrape_all_shows(show_links, progress_callback=None):
     all_data = []
     for i, show in enumerate(show_links):
-        if progress_callback:
-            progress_callback(i+1, len(show_links), show['designer'], show['image_url'])
         
         # displays what show is currently being scraped
         print(f"Scraping {i+1}/{len(show_links)}: {show['designer']}")
 
         try:
             show_data = scrape_show_page(show)
+
+            if progress_callback:
+                progress_callback(i+1, len(show_links), show_data['designer'], show_data['cover_image'])
+
             all_data.append(show_data)
 
         except Exception as e:
@@ -189,8 +185,6 @@ def save_to_csv(data, filename='fashion_shows.csv'):
             'URL': entry['collection_url'],
             'Cover Image': entry['cover_image'],
             'Review': entry['review'],
-            'Num Looks': len(entry['look_images']),
-            'Look Image URLs': ', '.join(entry['look_images'])  # You can also save this separately
         })
     df = pd.DataFrame(flat_data)
     df.to_csv(filename, index=False)

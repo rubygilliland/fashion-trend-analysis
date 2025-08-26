@@ -21,7 +21,7 @@ class FashionTrendAnalyzer(tk.Tk):
         self.configure(bg="#EECACA")  
 
         # creates large rigid frame size
-        self.geometry("1000x800")   
+        self.geometry("1000x1000")   
         self.resizable(False, False) 
 
         # container to hold all pages
@@ -263,14 +263,11 @@ class LoadingPage(tk.Frame):
         # initialize loading page label
         self.label = tk.Label(content, text="",
                               font=("Arial", 18, "bold"), bg="#E8C5C5")
-        self.label.pack(pady=(2, 20))
+        self.label.pack(pady=(2, 5))
         
         # initialize subtitle
         self.sublabel = tk.Label(content, text="", font=("Times", 12, "italic"), bg="#E8C5C5")
         self.sublabel.pack(pady=5)
-
-        self.image_label = tk.Label(content, bg="#E8C5C5")
-        self.image_label.pack(pady=5)
 
         # set loading bar color to pink
         s = ttk.Style()
@@ -280,8 +277,10 @@ class LoadingPage(tk.Frame):
         # create progressive loading bar
         self.progress = ttk.Progressbar(content, orient="horizontal",
                         length=300, style = 'pink.Horizontal.TProgressbar', mode="determinate")
-        self.progress.pack(pady=10)
+        self.progress.pack(pady=5)
 
+        self.image_label = tk.Label(content, bg="#E8C5C5")
+        self.image_label.pack(pady=5)
         self._current_img = None
     
     # update loading bar and sublabel dynamically
@@ -294,7 +293,8 @@ class LoadingPage(tk.Frame):
                     response = requests.get(cover_url, timeout=5)
                     response.raise_for_status()
                     print(f"Fetching cover for {show_name}: {cover_url}, status={response.status_code}")
-                    pil_img = Image.open(BytesIO(response.content)).resize((200, 300))
+                    pil_img = Image.open(BytesIO(response.content))
+                    pil_img = pil_img.resize((167, 251))  
                     self._current_img = ImageTk.PhotoImage(pil_img)
                     self.image_label.config(image=self._current_img)
                     self.update_idletasks()  # force refresh
