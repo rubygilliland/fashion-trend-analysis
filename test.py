@@ -5,6 +5,7 @@ def main():
     counts1 = analyze_single_season("data/spring_2025_ready_to_wear_shows.csv")
     plot_single_season(counts1, "Spring 2025 Ready to Wear")
 
-    counts2 = compare_seasons("data/spring_2025_ready_to_wear_shows.csv", "data/spring_2024_ready_to_wear_shows.csv")
+    counts1, counts2 = compare_seasons("data/spring_2025_ready_to_wear_shows.csv", "data/spring_2024_ready_to_wear_shows.csv")
+    plot_compared_seasons(counts1, "Spring 2025 RTW", counts2, "Spring 2024 RTW")
 
 main()

@@ -1,113 +1,103 @@
 from bs4 import BeautifulSoup
 import pandas as pd
+import time, requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-import time, random, requests
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from urllib.parse import urljoin, urlparse
 
 HEADERS = {'User-Agent': 'Mozilla/5.0'}
 
-# loads and reads data from Vogue website
 def get_show_links_selenium(collection_url):
     print("Launching browser to get show links...")
 
-    # launches web browser
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
+    options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--window-size=1920,1080")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     driver.get(collection_url)
+    shows, seen = [], set()
 
     try:
-        # all shows are listed as links in a sidebar on vogue website
-        print("Waiting for sidebar to load...")
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, 'nav[data-testid="navigation"] ul'))
-        )
+        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+
+        # light scroll to trigger any lazy content
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(0.8)
+        driver.execute_script("window.scrollTo(0, 0);")
+
+        base_path = urlparse(collection_url).path.rstrip("/")
+        base_origin = "https://www.vogue.com"
+
+        # search broadly, then refine to links under the collection path.
+        candidates_css = [
+            f'a[href^="{base_path}/"]',
+            f'a[href^="{base_origin}{base_path}/"]',
+            'nav[data-testid="navigation"] ul li a',
+            'a[class^="SummaryItemHedLink"]',
+            'a.card-article-link',
+
+            # final catch-all
+            'a[href*="/fashion-shows/"]',  
+        ]
+
+        total_found = 0
 
         # finds amount of links using css structure used in vogue website
-        links = driver.find_elements(By.CSS_SELECTOR, 'nav[data-testid="navigation"] ul li a')
-        print(f"Total links found: {len(links)}")
+        for css in candidates_css:
+            elems = driver.find_elements(By.CSS_SELECTOR, css)
+            if not elems:
+                continue
+            total_found += len(elems)
 
-        shows = []
-        seen = set()
+            for a in elems:
+                href = a.get_attribute("href")
+                if not href:
+                    continue
 
-        # loops through all links found and gathers data from each article
-        for link in links:
-            href = link.get_attribute("href")
+                full = urljoin(base_origin, href)
+                path = urlparse(full).path
 
-            if href and '/fashion-shows/' in href and href not in seen:
+                # keep only links under THIS collection (e.g., /fashion-shows/mexico-fall-2025/...)
+                if not (path.startswith(base_path + "/")):
+                    continue
+                if full in seen:
+                    continue
 
-                # extract the last part of the URL as a fallback for the designer name
-                name = href.split("/")[-1].replace("-", " ").title()
-                full_url = href if href.startswith("http") else "https://www.vogue.com" + href
+                # prefer visible text, then <h3 data-testid="SummaryItemHed">, then URL slug.
+                name = (a.text or "").strip()
+                if not name:
+                    try:
+                        name = a.find_element(By.CSS_SELECTOR, 'h3[data-testid="SummaryItemHed"]').text.strip()
+                    except Exception:
+                        name = path.split("/")[-1].replace("-", " ").title()
 
-                shows.append({
-                    'designer': name,
-                    'url': full_url,
-                    'image_url': None
-                })
+                # try to grab a thumbnail if present.
+                img_url = None
+                try:
+                    img_url = a.find_element(By.TAG_NAME, "img").get_attribute("src")
+                except Exception:
+                    pass
 
-                seen.add(href)
+                shows.append({"designer": name, "url": full, "image_url": img_url})
+                seen.add(full)
 
-
+        print(f"Total anchors scanned: {total_found}")
         print(f"Found {len(shows)} valid designer shows.")
         return shows
 
     except Exception as e:
-        print(f"Failed to load links: {e}")
+        print(f"Failed to collect show links: {e}")
         return []
 
     finally:
         driver.quit()
-
-'''
-# scrapes the desired data for an individual show link
-def scrape_show_page(show):
-    url = show['url']
-    response = requests.get(url, headers=HEADERS)
-    soup = BeautifulSoup(response.content, 'lxml')
-
-    # title or collection name
-    try:
-        url_parts = url.split('/')
-        season = url_parts[4].replace('-', ' ').title()
-        collection_name = f"{show['designer']} {season}"
-    except:
-        collection_name = f"{show['designer']} Unknown Season"
-
-
-    # show review article text
-    try:
-        review_div = soup.find('div', class_='article__body')
-        review = review_div.text.strip() if review_div else 'N/A'
-    except:
-        review = 'N/A'
-
-    # all show images
-    image_urls = []
-    try:
-        images = soup.find_all('img')
-        for img in images:
-            src = img.get('src')
-            if src and 'photos/' in src and 'runway' in src:
-                image_urls.append(src)
-    except:
-        pass
-
-    # each links data is organized by these sections and later saved to csv
-    return {
-        'designer': show['designer'],
-        'collection_url': url,
-        'cover_image': show['image_url'],
-        'collection_name': collection_name,
-        'review': review,
-        'look_images': image_urls
-    }
-'''
 
 # scrapes the desired data for an individual show link
 def scrape_show_page(show):

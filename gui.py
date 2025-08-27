@@ -21,7 +21,7 @@ class FashionTrendAnalyzer(tk.Tk):
         self.configure(bg="#EECACA")  
 
         # creates large rigid frame size
-        self.geometry("1000x1000")   
+        self.geometry("1000x800")   
         self.resizable(False, False) 
 
         # container to hold all pages
@@ -53,7 +53,7 @@ class StartPage(tk.Frame):
         super().__init__(parent, bg="#EECACA")
 
         title = tk.Label(self, text="FASHION TREND ANALYZER", font=("Arial", 24, "bold"), bg="#EECACA")
-        title.pack(pady=(220, 10))
+        title.pack(pady=(300, 10))
 
         subtitle = tk.Label(self, text="using VOGUE runway data", font=("Times", 12, "bold", "italic"), bg="#EECACA")
         subtitle.pack(pady=(0,10))
@@ -76,7 +76,7 @@ class AnalyzeOneSeasonPage(tk.Frame):
 
         label = tk.Label(self, text="ENTER VOGUE RUNWAY SEASON TO ANALYZE", 
                          font=("Arial", 18, "bold"), bg="#EECACA")
-        label.pack(pady=(220, 20))
+        label.pack(pady=(300, 20))
 
         # entry text box for user to type existing Vogue runway season name into
         self.entry = tk.Entry(self, font=("Times", 12, "italic"), width=30)
@@ -128,6 +128,13 @@ class AnalyzeOneSeasonPage(tk.Frame):
             controller.after(0, loading_page.label.config, {"text": "Analyzing data . . ."})
             results = analyze_single_season(csv_path)  
 
+            # clears previous sublabel and image
+            controller.after(0, loading_page.sublabel.config, {"text": ""})
+            controller.after(0, loading_page.clear_image)
+
+            # re-sets progress bar
+            controller.after(0, loading_page.reset_progress)
+            
             # when data is loaded result page is displayed
             results_page = controller.frames[ResultsPage]
             controller.after(0, results_page.display_results, results, season, False)
@@ -144,7 +151,7 @@ class CompareTwoSeasonsPage(tk.Frame):
 
         label = tk.Label(self, text="ENTER VOGUE RUNWAY SHOWS TO COMPARE", 
                          font=("Arial", 18, "bold"), bg="#EECACA")
-        label.pack(pady=(220, 20))
+        label.pack(pady=(300, 20))
 
         # entry text box for user to type existing Vogue runway season name into
         self.entry1 = tk.Entry(self, font=("Times", 12, "italic"), width=30)
@@ -198,12 +205,26 @@ class CompareTwoSeasonsPage(tk.Frame):
             # loading page displays that season two data scraping has begun
             controller.after(0, loading_page.label.config, {"text": "Gathering season two data . . ."})
 
+            # clears previous sublabel and image
+            controller.after(0, loading_page.sublabel.config, {"text": ""})
+            controller.after(0, loading_page.clear_image)
+
+            # re-sets progress bar
+            controller.after(0, loading_page.reset_progress)
+
             # runs scraper to gather a csv file path for parsing
             csv_path_2 = run_scraper_for_season(season_2, progress_callback=progress_callback)
 
             # changes text displayed on loading page
             controller.after(0, loading_page.label.config, {"text": "Analyzing data . . ."})
             results = compare_seasons(csv_path_1, csv_path_2)  
+
+            # clears previous sublabel and image
+            controller.after(0, loading_page.sublabel.config, {"text": ""})
+            controller.after(0, loading_page.clear_image)
+
+            # re-sets progress bar
+            controller.after(0, loading_page.reset_progress)
 
             # when data is loaded result page is displayed
             results_page = controller.frames[ResultsPage]
@@ -218,6 +239,9 @@ class CompareTwoSeasonsPage(tk.Frame):
 class ResultsPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="#F5E9E9")
+        # upon interaction displays start page
+        back_btn = tk.Button(self, text="Back", command=lambda: controller.show_frame(StartPage))
+        back_btn.pack(side=tk.TOP, anchor=tk.NE) 
 
         # title of page
         self.label = tk.Label(self, text="Analysis Results", font=("Arial", 18, "bold"), bg = "#F5E9E9")
@@ -227,9 +251,7 @@ class ResultsPage(tk.Frame):
         self.plot_frame = tk.Frame(self, bg="#F5E9E9")
         self.plot_frame.pack(expand=True, fill = tk.BOTH)
 
-        # upon interaction displays start page
-        back_btn = tk.Button(self, text="Back to Start", command=lambda: controller.show_frame(StartPage))
-        back_btn.pack(pady=20)
+        
 
     def display_results(self, results_1, season_1, compare, results_2= '', season_2 = ''):
 
@@ -264,10 +286,6 @@ class LoadingPage(tk.Frame):
         self.label = tk.Label(content, text="",
                               font=("Arial", 18, "bold"), bg="#E8C5C5")
         self.label.pack(pady=(2, 5))
-        
-        # initialize subtitle
-        self.sublabel = tk.Label(content, text="", font=("Times", 12, "italic"), bg="#E8C5C5")
-        self.sublabel.pack(pady=5)
 
         # set loading bar color to pink
         s = ttk.Style()
@@ -279,9 +297,20 @@ class LoadingPage(tk.Frame):
                         length=300, style = 'pink.Horizontal.TProgressbar', mode="determinate")
         self.progress.pack(pady=5)
 
+        # initialize subtitle
+        self.sublabel = tk.Label(content, text="", font=("Times", 12, "italic"), bg="#E8C5C5")
+        self.sublabel.pack(pady=5)
+
         self.image_label = tk.Label(content, bg="#E8C5C5")
         self.image_label.pack(pady=5)
-        self._current_img = None
+        self.current_img = None
+
+    def clear_image(self):
+        self.image_label.config(image="", text="")
+        self.image_label.image = None  # drop reference
+
+    def reset_progress(self):
+        self.progress["value"] = 0
     
     # update loading bar and sublabel dynamically
     def update_status(self, current, total, show_name, cover_url=None):
@@ -295,9 +324,11 @@ class LoadingPage(tk.Frame):
                     print(f"Fetching cover for {show_name}: {cover_url}, status={response.status_code}")
                     pil_img = Image.open(BytesIO(response.content))
                     pil_img = pil_img.resize((167, 251))  
-                    self._current_img = ImageTk.PhotoImage(pil_img)
-                    self.image_label.config(image=self._current_img)
-                    self.update_idletasks()  # force refresh
+                    self.current_img = ImageTk.PhotoImage(pil_img)
+                    self.image_label.config(image=self.current_img)
+
+                    # force refresh
+                    self.update_idletasks()  
 
                 except Exception as e:
                     print(f"Could not load cover image for {show_name}: {e}")

@@ -43,8 +43,8 @@ def plot_compared_seasons(counts_1, season_1, counts_2, season_2):
     fig, axes = plt.subplots(nrows = 2, ncols = 3, figsize = (12, 8))
 
     # adds title to grid
-    fig.suptitle('Comparison of Top Fashion Keywords in ' + title_season_1 + ' and ' + title_season_2 + ' Runway Reviews', 
-                   fontsize = 16, y = 0.99)
+    fig.suptitle('Comparison of Top Keywords in ' + title_season_1 + ' vs ' + title_season_2 + ' Runway Reviews', 
+                   fontsize = 14, y = 0.99)
     
     # plots data for each keyword category for both reviews
     plot_data(axes[0, 0], counts_1.get('colors'), 'Top Colors', '#FFEDF1', True, counts_2.get('colors'))

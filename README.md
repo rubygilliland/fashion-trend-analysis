@@ -10,6 +10,11 @@ Built with Tkinter, Matplotlib, and Pandas, this program allows users to scrape,
 3. Interactive Results Page – Visualizes the analyzed data using Matplotlib plots embedded directly in the GUI.
 4. Back Navigation – Easily return to the start page to run another analysis.
 
+# NOTES
+1. Wifi must be connected so the Vogue website can be accessed
+2. This program does not account for spelling errors
+3. Shows that are input must be real shows featured on vogue.com/fashion-shows
+
 # HOW TO USE
 1. Clone the repo
    ```bash
