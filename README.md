@@ -30,14 +30,12 @@ Built with Tkinter, Matplotlib, and Pandas, this program allows users to scrape,
 
 # SCREENSHOTS
 
-<img width="872" height="638" alt="image" src="https://github.com/user-attachments/assets/a231da89-dbae-47d6-a254-a66d3d549597" />
-<img width="990" height="548" alt="image" src="https://github.com/user-attachments/assets/227e3e4f-46a7-4323-850a-f00cbd509d19" />
-<img width="895" height="486" alt="image" src="https://github.com/user-attachments/assets/5ef7b9a7-ac51-4892-aaa9-92bf1f732b1e" />
-
-<img width="1243" height="997" alt="final_single" src="https://github.com/user-attachments/assets/9ec162e5-dc89-488d-aa54-a15be8285566" />
-
-<img width="1237" height="992" alt="comparison_results" src="https://github.com/user-attachments/assets/f349cb7e-6a38-47e0-ba0b-8c5317cc9f23" />
-
-
+<img width="1247" height="998" alt="image" src="https://github.com/user-attachments/assets/a231da89-dbae-47d6-a254-a66d3d549597" />
+<img width="1247" height="998" alt="image" src="https://github.com/user-attachments/assets/227e3e4f-46a7-4323-850a-f00cbd509d19" />
+<img width="1247" height="998" alt="image" src="https://github.com/user-attachments/assets/5ef7b9a7-ac51-4892-aaa9-92bf1f732b1e" />
 <img width="1247" height="998" alt="loading-page" src="https://github.com/user-attachments/assets/91b23df6-c8a1-4aba-9516-cbe1c5576b3f" />
+<img width="1247" height="998" alt="final_single" src="https://github.com/user-attachments/assets/9ec162e5-dc89-488d-aa54-a15be8285566" />
+<img width="1247" height="998" alt="comparison_results" src="https://github.com/user-attachments/assets/f349cb7e-6a38-47e0-ba0b-8c5317cc9f23" />
+
+
 
