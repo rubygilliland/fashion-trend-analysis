@@ -5,83 +5,223 @@ from collections import Counter
 
 # removes numbers and punctuation of words in "review" column of csv
 def clean_text(text):
-
-    # make lowercase
     text = str(text).lower()  
-
-    # remove punctuation and numbers
-    text = re.sub(r'[^a-z\s]', '', text)  
+    
+    # keep letters, spaces, and hyphens (remove numbers & punctuation only)
+    text = re.sub(r'[^a-z\s-]', '', text)  
+    
+    # normalize multiple spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+    
     return text
 
 # common color descriptors
 color_words = {
+    # basics
     'white', 'black', 'red', 'pink', 'blue', 'green', 'beige', 'brown', 'yellow',
-    'orange', 'grey', 'gray', 'purple', 'gold', 'silver', 'neon', 'ivory', 'nude',
-    'metallic', 'cream', 'navy', 'khaki', 'pastel', 'pastels', 'blush', 'butteryellow',
-    'mocha', 'rose', 'fuchsia', 'coral', 'peach', 'teracotta', 'maroon', 'burgundy',
-    'lavender', 'lilac', 'periwinkle', 'mauve', 'maud', 'plum', 'teal', 'turquoise,'
-    'aqua', 'mint', 'seafoam', 'olive', 'forestgreen', 'moss', 'sage', 'camel', 'rust',
-    'ochre', 'mustard', 'sand', 'bronze', 'copper', 'charcoal', 'midnight', 'aubergine', 
-    'ink', 'wine', 'cerulean', 'skyblue', 'dustyblue', 'babypink', 'babyblue', 
-    'wispypink', 'dustypink', 'mintgreen', 'chocolatebrown'
-}
+    'orange', 'grey', 'gray', 'purple', 'gold', 'silver', 'ivory', 'nude', 'cream',
+    'navy', 'khaki', 'neon', 'pastel', 'pastels',
+
+    # warm & soft tones
+    'blush', 'butteryellow', 'butter-yellow', 'butter yellow''mocha', 'rose', 'fuchsia', 
+    'coral', 'peach', 'terracotta', 'apricot', 'melon', 'cantaloupe', 'strawberry', 
+    'raspberry', 'cherry', 'cranberry',
+
+    # dark & rich tones
+    'maroon', 'burgundy', 'wine', 'oxblood', 'aubergine', 'plum', 'mahogany', 'brick',
+    'rust', 'cinnamon', 'chocolate', 'coffee', 'espresso',
+    'chocolatebrown', 'chocolate brown', 'chocolate-brown',
+
+    # light & pastel tones
+    'lavender', 'lilac', 'periwinkle', 'mauve',
+    'dustypink', 'dusty pink', 'dusty-pink',
+    'babypink', 'baby pink', 'baby-pink',
+    'babyblue', 'baby blue', 'baby-blue',
+    'skyblue', 'sky blue', 'sky-blue',
+    'dustyblue', 'dusty blue', 'dusty-blue',
+    'wispypink', 'wispy pink', 'wispy-pink',
+    'mintgreen', 'mint green', 'mint-green',
+    'seafoam', 'buttermint', 'celadon', 'pistachio',
+
+    # jewel tones
+    'emerald', 'jade', 'malachite', 'teal', 'turquoise', 'aqua', 'topaz', 'amber',
+    'amethyst', 'sapphire', 'ruby', 'garnet', 'opal', 'onyx', 'cobalt', 'ultramarine',
+
+    # earthy & natural
+    'olive',
+    'forestgreen', 'forest green', 'forest-green',
+    'moss', 'hunter', 'fern', 'spruce', 'pine',
+    'camel', 'sand', 'taupe', 'stone', 'slate', 'earthy', 'ochre', 'mustard',
+
+    # metals & shine
+    'bronze', 'copper', 'charcoal', 'graphite', 'metallic',
+    'rosegold', 'rose gold', 'rose-gold',
+    'gunmetal', 'pewter', 'platinum', 'chrome', 'brass',
+
+    # dark/neutral spectrum
+    'ink', 'midnight', 'obsidian', 'ash', 'smoke', 'storm',
+    'pearl', 'eggshell', 'bone', 'antiquewhite', 'antique white', 'antique-white',
+    'vintagewhite', 'vintage white', 'vintage-white',
+
+    # trend/fashion shades
+    'caramel', 'tangerine', 'saffron', 'chartreuse', 'lime', 'citron', 'neon', 'neons',
+    'hotpink', 'hot pink', 'electric blue', 'electricblue', 'azure', 'buttercream', ''
+    'dustyrose', 'dusty rose', 'dusty rose'
+
+    # style descriptors
+    'muted', 'tonal', 'neutral', 'jeweltone', 'jeweltones', 'jewel-tone', 'jewel tone'
+}  
 
 # common fabric descriptors
 fabric_words = {
-    'cotton', 'linen', 'leather', 'denim', 'silk', 'satin', 'wool', 'lace',
-    'tulle', 'knit', 'chiffon', 'sheer', 'mesh', 'velvet', 'organza', 'jersey',
-    'tweed', 'fur', 'suede', 'nylon', 'cottons', 'transparent', 'wool', 'wools'
-    'cashmere', 'shearling', 'organza', 'jacquard', 'brocade', 'crepe', 'corduroy',
-    'canvas', 'netting', 'fleece', 'nylon', 'polyester', 'spandex', 'PVC', 'vinyl,'
-    'lycra', 'neoprene', 'taffeta', 'terrycloth', 'modal'
+    # natural fibers
+    'cotton', 'cottons', 'linen', 'linens', 'silk', 'silks', 'wool', 'wools', 'cashmere',
+    'alpaca', 'angora', 'mohair', 'hemp', 'jute', 'ramie',
+
+    # leather & skins
+    'leather', 'suede', 'patent', 'alligator', 'crocodile', 'python', 
+    'snakeskin', 'shearling', 'sheepskin',
+
+    # denim & casual
+    'denim', 'denims', 'chambray', 'canvas', 'corduroy', 'twill',
+
+    # luxe & delicate
+    'velvet', 'velvets', 'velour', 'satin', 'satins', 'silk satin', 'silk-satin', 'silksatin',
+    'chiffon', 'organza', 'jacquard', 'brocade', 'crepe', 'taffeta', 'georgette',
+
+    # knits & stretch
+    'knit', 'knits', 'jersey', 'ribbed', 'spandex', 'lycra', 'modal', 'tencel', 'rayon',
+    'viscose', 'bamboo', 'interlock',
+
+    # performance / technical
+    'nylon', 'polyester', 'acrylic', 'neoprene', 'elastane', 'microfiber',
+
+    # casual / comfy
+    'fleece', 'flannel', 'terrycloth', 'terry', 'sweatshirt', 'sweater',
+
+    # sheer / light
+    'lace', 'tulle', 'mesh', 'netting', 'sheer', 'transparent', 'semi-sheer',
+
+    # embellishment / surface
+    'sequin', 'sequins', 'beaded', 'embroidered', 'embroidery', 'appliqué', 
+    'metallic-thread', 'lamé', 'glitter',
+
+    # faux & imitations
+    'fauxfur', 'faux fur', 'faux-fur',
+    'pleather', 'veganleather', 'vegan leather', 'vegan-leather',
+    'pvc', 'vinyl',
+
+    # others
+    'tweed', 'crochet', 'macrame'
 }
+
 
 # common silhouette descriptors
 silhouette_words = {
+    # fitted vs loose
     'fitted', 'oversized', 'voluminous', 'structured', 'flowy', 'cinched',
-    'asymmetrical', 'draped', 'tailored', 'boxy', 'cropped', 'high waisted',
-    'pleated', 'puff', 'flared', 'layered', 'shift', 'sheath', 'wrap', 'slip',
-    'streamlined', 'relaxed', 'sculptural', 'ball gown', 'empire', 'mermaid',
-    'column', 'trumpet', 'peplum', 'biascut', 'wideleg', 'bootcut', 'straightleg',
-    'skinny', 'tapered', 'lowrise', 'baggy', 'caped', 'strapless', 'low-rise'
-    'offtheshoulder', 'dolman', 'raglan', 'high-waisted', 'off-the-shoulder',
-    'mini', 'maxi', 'midi', 'bodycon'
+    'relaxed', 'boxy', 'baggy', 'streamlined', 'sculptural',
+
+    # cut & drape
+    'asymmetrical', 'draped', 'tailored', 'wrap', 'biascut', 'bias-cut',
+    'peplum', 'layered', 'pleated', 'puff', 'flared', 'cape', 'caped', 'draping'
+
+    # waist and rise
+    'high waisted', 'high-waisted', 'lowrise', 'low-rise', 'mid-rise', 'midrise',
+
+    # leg cuts
+    'wideleg', 'wide-leg', 'straightleg', 'straight-leg', 'bootcut', 'skinny', 'tapered',
+
+    # sleeve & shoulder
+    'strapless', 'offtheshoulder', 'off-the-shoulder', 'dolman', 'raglan', 'balloon-sleeve',
+    'bishop-sleeve', 'puffed-sleeve',
+
+    # dresses & skirts
+    'mini', 'midi', 'maxi', 'shift', 'sheath', 'ball gown', 'empire', 'mermaid',
+    'column', 'trumpet', 'a-line', 'fit-and-flare', 'peplum-skirt', 'tiered', 'wrap-dress',
+
+    # bodycon & figure-hugging
+    'bodycon', 'body-con', 'body conscious', 'slim-fit', 'slim fit',
+
+    # layering & texture silhouettes
+    'layered', 'tiered', 'ruffled', 'asymmetric-hem', 'high-low', 'high low',
+
+    # other fashion descriptors
+    'bell-sleeve', 'capelet', 'kimono', 'poncho', 'trench', 'shirt-dress', 'shirt dress'
 }
+
 
 # common piece descriptors
 piece_words = {
-    'shorts', 'top', 'tops', 'jacket', 'jackets', 'jorts', 'dresses',
-    'blouse', 'blouses', 'skirt', 'skirts', 'tank', 'tanks', 'boot', 'boots', 
-    'hat', 'hats', 'heels', 'sneakers', 'trainers', 'glasses', 'sunglasses', 'scarf',
-    'scarves', 'cargo', 'pants', 'jeans', 'blazer', 'blazers', 'tee', 'tees', 'sweater', 
-    'sweaters', 't-shirt', 'vest', 'sweatshirt', 'sweatshirts', 'microshorts', 'micro-shorts'
-    'coat', 'coats', 'trench', 'trenchcoat', 'overcoat', 'cardigan', 'cardigans',
-    'bralette', 'bodysuit', 'gown', 'kimono', 'parka', 'pullover', 'romper', 'jumpsuit',
-    'suit', 'suits', 'cape', 'cloak', 'glove', 'gloves', 'loafer', 'loafers', 'mule', 'mules',
-    'sandals', 'slides', 'slippers', 'clogs', 'turtleneck', 'turtlenecks', 'legging', 'leggings',
-    'miniskirt', 'mini-skirt', 'miniskirts', 'mini-skirts', 
+    # tops
+    'top', 'tops', 'tee', 'tees', 't-shirt', 'tshirts', 'tank', 'tanks',
+    'blouse', 'blouses', 'shirt', 'shirts', 'cropped top', 'cropped-top', 'croppedtop',
+    'turtleneck', 'turtlenecks', 'pullover', 'hoodie', 'hoodies', 'sweater', 'sweaters',
+    'sweatshirt', 'sweatshirts', 'vest', 'bralette', 'bodysuit', 'cardigan', 'cardigans',
+
+    # bottoms
+    'shorts', 'microshorts', 'micro-shorts', 'micro shorts', 'jorts', 'jeans', 'pants', 
+    'trousers', 'legging', 'leggings', 'skirt', 'skirts', 'miniskirt', 'mini-skirt',
+    'miniskirts', 'mini-skirts', 'cargo pants', 'cargo-pants', 'cargo', 'wide-leg pants',
+    'wideleg pants', 'wideleg-pants', 'straight-leg pants', 'straightleg pants',
+
+    # dresses & jumpsuits
+    'dress', 'dresses', 'gown', 'maxi dress', 'maxi-dress', 'midi dress', 'midi-dress',
+    'wrap dress', 'wrap-dress', 'sheath dress', 'sheath-dress', 'romper', 'jumpsuit', 'suit', 'suits',
+    'mini dress', 'minidress', 'mini-dress', 'slip', 'slips'
+
+    # outerwear
+    'jacket', 'jackets', 'coat', 'coats', 'trench', 'trench coat', 'trenchcoat', 'overcoat', 
+    'parka', 'cape', 'cloak', 'blazer', 'blazers', 'poncho', 'kimono', 'duster',
+
+    # footwear
+    'boot', 'boots', 'heel', 'heels', 'sneaker', 'sneakers', 'trainer', 'trainers', 
+    'loafer', 'loafers', 'mule', 'mules', 'sandals', 'slides', 'slippers', 'clogs', 'espadrilles',
+
+    # accessories
+    'hat', 'hats', 'scarf', 'scarves', 'glove', 'gloves', 'belt', 'belts', 
+    'sunglasses', 'glasses', 'headband', 'headbands', 'beanie', 'beanies', 'visor',
+
+    # novelty / trendy
+    'micro skirt', 'micro-skirt', 'microskirt', 'crop top', 'crop-top', 'croptop', 
+    'bodycon dress', 'bodycon-dress', 'bodycondress', 'cardigan', 'cardigans', 'hooded coat', 
+    'hooded-coat', 'mini skirt', 'mini-skirt', 'miniskirt'
 }
+
 
 # common details
 details_words = {
-    'buttons', 'zippers', 'snaps', 'ties', 'hookandeye', 'lacing', 'buckles', 'drawstrings',
-    'pleats', 'darts', 'slits', 'cutouts', 'ruching', 'gathering', 'draping', 'boning',
-    'vents', 'padding', 'seams', 'paneling', 'piping', 'tie-dye', 'ruched', 'graphics'
-    'ruffles', 'frills', 'bows', 'feathers', 'sequins', 'beads', 'crystals', 'graphic',
-    'embroidery', 'applique', 'fringe', 'studs', 'grommets', 'rosettes', 'quilting', 'smocking',
-    'rawedges', 'distressing', 'metallicfinish', 'highshine', 'matte', 'gloss',
-    'fading', 'tiedye', 'prints', 'patterns', 'patchwork', 'lasercut', 'flocking'
+    # closures & ties
+    'buttons', 'button', 'zippers', 'zipper', 'snaps', 'snap', 'ties', 'tie', 
+    'hookandeye', 'hook-and-eye', 'hook and eye', 'lacing', 'lace-up', 'lace up',
+    'buckles', 'drawstrings', 'draw-string', 'draw string',
+
+    # shaping & structure
+    'pleats', 'pleating', 'darts', 'slits', 'cutouts', 'cut-outs', 'ruched', 'ruching', 
+    'gathering', 'gathered', 'boning', 'vents', 'padding', 'seams', 
+    'paneling', 'piping', 'rawedges', 'raw edges', 'distressing', 'highshine', 'high shine', 
+    'matte', 'gloss', 'fading', 'quilting', 
+    'quilted', 'smocking', 'smocked', 'lasercut', 'laser-cut', 'laser cut', 'flocking',
+
+    # embellishments
+    'ruffles', 'ruffled', 'frills', 'bows', 'feathers', 'sequins', 'beads', 'beaded', 
+    'crystals', 'graphic', 'graphics', 'embroidery', 'embroidered', 'applique', 'appliqué', 
+    'fringe', 'fringing', 'studs', 'grommets', 'rosettes', 'patchwork', 'high-shine',
+    'logo', 'monogram', 'text', 'artprint', 'art print',
 }
 
 # common patterns
 pattern_words = {
-    'floral', 'paisley', 'plaid', 'tartan', 'houndstooth', 'check', 'gingham',
-    'stripe', 'pinstripe', 'polkadot', 'dot', 'animalprint', 'leopard', 'zebra', 'snake',
-    'camouflage', 'camo', 'geometric', 'abstract', 'tie-dye', 'ombre',
-    'graphic', 'logo', 'monogram', 'text', 'artprint', 'patchwork', 'colorblock',
-    'laceprint', 'brocade', 'ikat', 'chevron', 'marble', 'swirl', 'wave',
-    'mesh', 'net', 'grid', 'argyle', 'jacquard', 'printmixing'
+    'floral', 'florals', 'paisley', 'plaid', 'tartan', 'houndstooth', 'check', 'checks', 
+    'gingham', 'stripe', 'stripes', 'pinstripe', 'pin-stripe', 'polkadot', 'polka-dot', 
+    'dot', 'animalprint', 'animal print', 'animal-print', 'leopard', 'zebra', 'snake', 
+    'camouflage', 'camo', 'geometric', 'abstract', 'tie-dye', 'tie dye', 'tiedye', 'ombre', 
+    'colorblock', 'color-block', 'brocade', 'ikat', 'chevron', 'print mixing'
+    'marble', 'swirl', 'wave', 'mesh', 'net', 'grid', 'argyle', 'jacquard', 'printmixing', 
+    'animal print', 'animal-print', 'floral print', 'floral-print', 'geometric print', 
+    'geometric-print', 'tie-dye print', 'tie-dye-print', 'plain', 'print-mixing'
 }
+
 
 # gets counts for all words in a category (color, fabric, etc.)
 def get_counts(review):
@@ -112,6 +252,9 @@ def get_clean_rev(csv_path):
 
     # changes review to cleaned review using clean_text function
     df['Cleaned Review'] = df['Review'].apply(clean_text)
+
+    # saves updated dataframe with cleaned reviews back to same csv
+    df.to_csv(csv_path, index=False)
 
     # creates text of clean review
     clean_review = ' '.join([str(r) for r in df['Cleaned Review'].dropna()])
